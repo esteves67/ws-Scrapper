@@ -3,8 +3,6 @@ const fetch = require('node-fetch');
 const low = require('lowdb');
 const fs = require('fs');
 const FileSync = require('lowdb/adapters/FileSync');
-const { rejects } = require('assert');
-
 
 module.exports = (() => {
     let public = {};

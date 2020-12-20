@@ -2,3 +2,5 @@ node_modules
 tokens
 data
 out.png
+debug.log
+.env
