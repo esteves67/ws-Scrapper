@@ -1,5 +1,7 @@
 const venom = require('venom-bot');
 const { Telegraf } = require('telegraf');
+const fs = require('fs');
+const fsPromises = fs.promises;
 const scrap = require('./scrap');
 const config = require('./config')
 
@@ -15,11 +17,20 @@ bot.command('login', ctx => {
     let nombre = texto[1];
 
     if (nombre) {
-        login(nombre);
-        ctx.reply('Cargando...(Espera 20 segundos)');
-        setTimeout(() => {
-            ctx.replyWithPhoto({source : 'out.png'});
-        }, 9000);    
+        login(nombre)
+        .then( () => {
+          setTimeout( () => {
+            fsPromises.access('out.png', fs.constants.R_OK | fs.constants.W_OK)
+              .then(() => {
+                ctx.replyWithPhoto({source: 'out.png'});
+                fs.unlinkSync('out.png');
+              })
+              .catch(() => {
+                ctx.reply('No existe la imagen QR');
+              })
+          }, 10000);
+        })
+        
     } else {
         ctx.reply('Introduce el nombre de la session...');
     }  
@@ -66,8 +77,11 @@ async function login(sessionName) {
         undefined,
         { logQR: false }
       )
-    .then(cliente => {
-        client = cliente;
+    .then(async client => {
+      const state = await client.getConnectionState();
+      if(state == 'CONNECTED') {
+        console.log('*Conectado*');
+      }
     })
     .catch(err => {
         console.log(err);

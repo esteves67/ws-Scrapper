@@ -12,6 +12,6 @@
     "lowdb": "^1.0.0",
     "node-fetch": "^2.6.1",
     "telegraf": "^3.38.0",
-    "venom-bot": "^2.2.0"
+    "venom-bot": "^2.2.2"
   }
 }

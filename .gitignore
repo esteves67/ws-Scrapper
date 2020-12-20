@@ -1,6 +1,6 @@
 node_modules
 tokens
 data
-out.png
+qrCode.png
 debug.log
-.env
+config.js
