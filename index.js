@@ -1,10 +1,9 @@
 const venom = require('venom-bot');
 const { Telegraf } = require('telegraf');
 const scrap = require('./scrap');
+const config = require('./config')
 
-const TOKEN = "";
-
-const bot = new Telegraf(TOKEN);
+const bot = new Telegraf(config.TELEGRAM_TOKEN);
 
 bot.start( ctx => {
     ctx.reply('Ws scrapping bot');
