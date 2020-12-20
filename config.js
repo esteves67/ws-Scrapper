@@ -1,3 +1,3 @@
 module.exports = {
-    TELEGRAM_TOKEN = ""
+    TELEGRAM_TOKEN : ""
 }
