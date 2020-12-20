@@ -1,6 +1,6 @@
 {
   "name": "ws-hack",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Recolector de datos de chats de whatsApp",
   "main": "index.js",
   "scripts": {
@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "lowdb": "^1.0.0",
+    "mime-types": "^2.1.27",
     "node-fetch": "^2.6.1",
     "telegraf": "^3.38.0",
     "venom-bot": "^2.2.2"

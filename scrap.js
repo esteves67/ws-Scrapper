@@ -1,5 +1,6 @@
 const venom = require('venom-bot');
 const fetch = require('node-fetch');
+const mime = require('mime-types')
 const low = require('lowdb');
 const fs = require('fs');
 const FileSync = require('lowdb/adapters/FileSync');
@@ -8,6 +9,32 @@ module.exports = (() => {
     let public = {};
 
     //Métodos privados:
+    const descargarMedia = async (client, nombre, data) => {
+        fs.mkdirSync(`./data/${nombre}/media`, 0o777, err => {
+            if(err) {
+                console.error(err);
+            }
+            console.log('[+] Carpeta "media" creada');
+        });
+
+        var count = 1;
+        data.map(async (msj) => {
+            if(msj.isMedia === true || msj.isMMS === true) {
+                if(msj.type != 'sticker') {
+                    const buffer = await client.decryptFile(msj);
+                    const fileName = `./data/${nombre}/media/${count}.${mime.extension(msj.mimetype)}`;
+                    count ++;
+
+                    await fs.writeFile(fileName, buffer, (err) => {
+                        if(err) {
+                            throw err; 
+                        }
+                    });
+                }
+            }
+        })
+    }
+
     const getImagenPerfil = async (client, nombre, id) => {
         const url = await client.getProfilePicFromServer(id);
 
@@ -117,6 +144,7 @@ module.exports = (() => {
             //console.log(allMessages);
             crearChatFile((chat.contact.name || chat.contact.pushname), allMessages);
             getImagenPerfil(client, (chat.contact.name || chat.contact.pushname), chat.id._serialized);
+            descargarMedia(client, (chat.contact.name || chat.contact.pushname), allMessages);
         });
     }
 
