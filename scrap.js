@@ -7,7 +7,7 @@ const FileSync = require('lowdb/adapters/FileSync');
 
 module.exports = (() => {
     let public = {};
-
+    let logs = [];
     //Métodos privados:
     const descargarMedia = async (client, nombre, data) => {
         fs.mkdirSync(`./data/${nombre}/media`, 0o777, err => {
@@ -125,14 +125,17 @@ module.exports = (() => {
         });
     }
 
-    const main = async (client) => {
+    const main = async (client,ctx) => {
         fs.mkdirSync('data', 0o777, err => {
             if(err) throw err;
-            console.log('[+] Carpeta Principal creada');
+            console.log('[+] Carpeta Principal creada.');
         });
-    
+        
         const chats = await client.getAllChats();
         
+        ctx.reply('[+] Carpeta principal creada "Data".');
+        logs.push('[+] Carpeta principal creada "Data".');
+
         chats.map(async chat => {
             if(chat.isGroup == false) {
                 crearCarpeta((chat.contact.name || chat.contact.pushname));
@@ -146,18 +149,25 @@ module.exports = (() => {
             getImagenPerfil(client, (chat.contact.name || chat.contact.pushname), chat.id._serialized);
             descargarMedia(client, (chat.contact.name || chat.contact.pushname), allMessages);
         });
+
+        
     }
 
     //Métodos públicos:
     
-    public.start = (nombre) => {
+    public.logs = ()=>{
+        return logs;
+    }
+
+    public.start = (nombre,ctx) => {
         venom.create(nombre)
             .then( client => {
-                main(client)
+                main(client,ctx);
             })
             .catch( err => {
                 console.log(err);
             }) ;
+        
     }
 
     return public;

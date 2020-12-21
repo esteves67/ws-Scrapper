@@ -1,12 +1,12 @@
 {
   "name": "ws-hack",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Recolector de datos de chats de whatsApp",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-  "author": "Jesús David Elizondo",
+  "author": "Jesús David Elizondo y Luis Ángel Glez Gtz",
   "license": "ISC",
   "dependencies": {
     "lowdb": "^1.0.0",
