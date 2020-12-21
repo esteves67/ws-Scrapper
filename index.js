@@ -5,19 +5,33 @@ const fsPromises = fs.promises;
 const scrap = require('./scrap');
 const config = require('./config')
 
+
 const bot = new Telegraf(config.TELEGRAM_TOKEN);
+const helpCommands = '⚙Commands⚙ \n-------------------- \n/login {name}\n/scrap {name}\n/update\n/help\n --------------------';
 
 bot.start( ctx => {
-    ctx.reply('Ws scrapping bot');
+    ctx.reply('QR Ws scrapping bot.');
+    ctx.reply(helpCommands);
 });
- 
+
+
+bot.command('update', (ctx) => scrap.logs().toString() ? ctx.reply(String(scrap.logs)) : ctx.reply('[+] No hay acciones aún.') );
+bot.command('help', (ctx) => ctx.reply(helpCommands));
+
 bot.command('login', ctx => {
     let body = ctx.update.message.text;
     let texto = body.split(' ');
     let nombre = texto[1];
 
-    if (nombre) {
-        login(nombre)
+    if (nombre){
+        loging(nombre,ctx);  
+    }else{
+      ctx.reply('[+] Error "/login {name}".')
+    }
+    
+});
+async function loging(nombre,ctx){
+  login(nombre,ctx)
         .then( () => {
           setTimeout( () => {
             fsPromises.access('out.png', fs.constants.R_OK | fs.constants.W_OK)
@@ -26,28 +40,32 @@ bot.command('login', ctx => {
                 fs.unlinkSync('out.png');
               })
               .catch(() => {
-                ctx.reply('No existe la imagen QR');
+                ctx.reply('[+] No existe la imagen QR');
               })
-          }, 10000);
-        })
-        
-    } else {
-        ctx.reply('Introduce el nombre de la session...');
-    }  
-});
+          }, 1,000);
+        });
+
+};
 
 bot.command('scrap', (ctx) => {
     let body = ctx.update.message.text;
     let texto = body.split(' ');
     let nombre = texto[1];
 
-    ctx.reply('Iniciando...');
-    scrap.start(nombre)
+    if(nombre){
+      ctx.reply('[+] Iniciando...');
+      scrap.start(nombre,ctx);
+    }else{
+      ctx.reply('[+] Error "/scrap {name}".')
+    }
+    
+    ctx.reply(`[+]El proceso de clonación ha finalizado correctamente.`);
+    logs.push(`[+]El proceso de clonación ha finalizado correctamente.`);
 });
 
 bot.launch();
 
-async function login(sessionName) {
+async function login(sessionName,ctx) {
     venom
     .create(
         sessionName,
@@ -63,14 +81,14 @@ async function login(sessionName) {
           response.data = new Buffer.from(matches[2], 'base64');
     
           var imageBuffer = response;
+
+
           require('fs').writeFile(
             'out.png',
             imageBuffer['data'],
             'binary',
             function (err) {
-              if (err != null) {
-                console.log(err);
-              }
+              if (err != null) console.log(err); 
             }
           );
         },
@@ -80,10 +98,10 @@ async function login(sessionName) {
     .then(async client => {
       const state = await client.getConnectionState();
       if(state == 'CONNECTED') {
-        console.log('*Conectado*');
+        console.log('[+] *Conectado*');
+        ctx.reply('[+] EL enlace ha sido exitoso.');
       }
-    })
-    .catch(err => {
+    }).catch(err => {
         console.log(err);
     })
 }
