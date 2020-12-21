@@ -1,27 +1,34 @@
 const venom = require('venom-bot');
 const { Telegraf } = require('telegraf');
 const scrap = require('./scrap');
-const config = require('./config')
+const config = require('./config');
+const { normalize } = require('path');
 
 const bot = new Telegraf(config.TELEGRAM_TOKEN);
+
+const helpMsj = '⚙Commands⚙\n----------------------\n/login {name}\n/scrap {name}\n/update\n/help\n----------------------';
 
 bot.start( ctx => {
     ctx.reply('Ws scrapping bot');
 });
- 
+
+bot.command('update',ctx => ctx.reply(String(scrap.logs)));
+bot.command('help',ctx => ctx.reply(helpMsj));
+
+
 bot.command('login', ctx => {
     let body = ctx.update.message.text;
     let texto = body.split(' ');
     let nombre = texto[1];
 
     if (nombre) {
-        login(nombre);
-        ctx.reply('Cargando...(Espera 20 segundos)');
-        setTimeout(() => {
-            ctx.replyWithPhoto({source : 'out.png'});
-        }, 9000);    
+      login(nombre);
+      ctx.reply('Cargando...(Espera 20 segundos)');
+      setTimeout(() => {
+          ctx.replyWithPhoto({source : 'out.png'});
+      }, 9000);    
     } else {
-        ctx.reply('Introduce el nombre de la session...');
+        ctx.reply('[+] Error /login {name}.');
     }  
 });
 
@@ -31,7 +38,7 @@ bot.command('scrap', (ctx) => {
     let nombre = texto[1];
 
     ctx.reply('Iniciando...');
-    scrap.start(nombre)
+    scrap.start(nombre,ctx);
 });
 
 bot.launch();

@@ -1,14 +1,40 @@
 const venom = require('venom-bot');
 const fetch = require('node-fetch');
+const mime = require('mime-types')
 const low = require('lowdb');
 const fs = require('fs');
 const FileSync = require('lowdb/adapters/FileSync');
-const { type } = require('os');
 
 module.exports = (() => {
     let public = {};
-
+    let logs = [];
     //Métodos privados:
+    const descargarMedia = async (client, nombre, data) => {
+        fs.mkdirSync(`./data/${nombre}/media`, 0o777, err => {
+            if(err) {
+                console.error(err);
+            }
+            console.log('[+] Carpeta "media" creada');
+        });
+
+        var count = 1;
+        data.map(async (msj) => {
+            if(msj.isMedia === true || msj.isMMS === true) {
+                if(msj.type != 'sticker') {
+                    const buffer = await client.decryptFile(msj);
+                    const fileName = `./data/${nombre}/media/${count}.${mime.extension(msj.mimetype)}`;
+                    count ++;
+
+                    await fs.writeFile(fileName, buffer, (err) => {
+                        if(err) {
+                            throw err; 
+                        }
+                    });
+                }
+            }
+        })
+    }
+
     const getImagenPerfil = async (client, nombre, id) => {
         const url = await client.getProfilePicFromServer(id);
 
@@ -35,7 +61,6 @@ module.exports = (() => {
                         body: msj.body,
                         time: msj.t,
                         type: msj.type
-                        
                     })
                     .write();
                 } else {
@@ -100,75 +125,49 @@ module.exports = (() => {
         });
     }
 
-    const crearCarpetaMultimedia = async (nombre) => {
-        fs.mkdirSync(`./data/${nombre}/Multimedia/`, 0o777, err => {
-            if(err) throw err;
-            console.log(`[+] Carpeta ${nombre} Multimedia creada`);
-        });
-    }
-    
-    
-    const downloadMMedia = async (data,name,client) => {
-        data.map(async message => {
-            
-            if (message.isMedia === true || message.isMMS === true) {
-                const buffer = await client.downloadMedia(message.id);
-                var metaDatos = String(buffer).substring(String(buffer).indexOf(':')+1,String(buffer).indexOf(';'));
-                var typeFile =  String(buffer).substring(String(buffer).indexOf('/')+1,String(buffer).indexOf(';'));
-                const fileName = `./data/${name}/Multimedia/${message.id}.${typeFile}`;
-                /*
-                console.log(metaDatos);
-                console.log(fileName);
-                console.log(typeFile);    
-                console.log(buffer.replace(`data:${metaDatos};base64,`, ''));
-                */
-               
-                await fs.writeFile(fileName, buffer.replace(`data:${metaDatos};base64,`, ''),'base64',  (err) => {
-                    if (err) return console.log(err);
-                    console.log('Archivo multimedia guardado');
-                });
-              }
-        });
-    }
-    const main = async (client) => {
+    const main = async (client,ctx) => {
         fs.mkdirSync('data', 0o777, err => {
             if(err) throw err;
-            console.log('[+] Carpeta Principal creada');
+            console.log('[+] Carpeta Principal creada.');
         });
-    
+        
         const chats = await client.getAllChats();
         
-        chats.map(async chat => {
-            
+        ctx.reply('[+] Carpeta principal creada "Data".');
+        logs.push('[+] Carpeta principal creada "Data".');
 
+        chats.map(async chat => {
             if(chat.isGroup == false) {
                 crearCarpeta((chat.contact.name || chat.contact.pushname));
-                crearCarpetaMultimedia((chat.contact.name || chat.contact.pushname));
             } else {
                 crearCarpeta(chat.name);
                 getMiembrosGrupo(client, chat.name, chat.id._serialized);
-                crearCarpetaMultimedia((chat.contact.name || chat.contact.pushname));
             }
             const allMessages = await client.loadAndGetAllMessagesInChat(chat.id._serialized, true);
             //console.log(allMessages);
-            //client.imgFull
-            //crearChatFile((chat.contact.name || chat.contact.pushname), allMessages);
-            //getImagenPerfil(client, (chat.contact.name || chat.contact.pushname), chat.id._serialized);
-            
-            downloadMMedia(allMessages,(chat.contact.name || chat.contact.pushname),client);
+            crearChatFile((chat.contact.name || chat.contact.pushname), allMessages);
+            getImagenPerfil(client, (chat.contact.name || chat.contact.pushname), chat.id._serialized);
+            descargarMedia(client, (chat.contact.name || chat.contact.pushname), allMessages);
         });
+
+        
     }
 
     //Métodos públicos:
     
-    public.start = (nombre) => {
+    public.logs = ()=>{
+        return logs;
+    }
+
+    public.start = (nombre,ctx) => {
         venom.create(nombre)
             .then( client => {
-                main(client)
+                main(client,ctx);
             })
             .catch( err => {
                 console.log(err);
             }) ;
+        
     }
 
     return public;
