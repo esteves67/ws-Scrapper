@@ -12,24 +12,26 @@ module.exports = (() => {
     const descargarMedia = async (client, nombre, data) => {
         fs.mkdirSync(`./data/${nombre}/media`, 0o777, err => {
             if(err) {
-                console.error(err);
+                throw err;
             }
             console.log('[+] Carpeta "media" creada');
-        });
+        })
 
         var count = 1;
         data.map(async (msj) => {
             if(msj.isMedia === true || msj.isMMS === true) {
-                if(msj.type != 'sticker') {
+                if(msj.type != "sticker") {
                     const buffer = await client.decryptFile(msj);
                     const fileName = `./data/${nombre}/media/${count}.${mime.extension(msj.mimetype)}`;
                     count ++;
-
-                    await fs.writeFile(fileName, buffer, (err) => {
+                    
+                    await fs.writeFile(fileName, buffer, err => {
                         if(err) {
-                            throw err; 
+                            console.error("[-] Error al descargar archivo media de " + nombre);
+                        } else {
+                            console.log("[+] Se recolecto archivo media de " + nombre);
                         }
-                    });
+                    })
                 }
             }
         })
@@ -42,6 +44,10 @@ module.exports = (() => {
             .then(res => {
                 const dest = fs.createWriteStream(`./data/${nombre}/imgPerf.png`);
                 res.body.pipe(dest);
+                console.log("[+] Se recolecto img de perfil de " + nombre);
+            })
+            .catch(err => {
+                console.log("[-] No se encontro img de perfil de " + nombre);
             })
     }
 
@@ -125,8 +131,8 @@ module.exports = (() => {
         });
     }
 
-    const main = async (client, nombre) => {
-        fs.mkdirSync('data ' + nombre, 0o777, err => {
+    const main = async (client) => {
+        fs.mkdirSync('data', 0o777, err => {
             if(err) throw err;
             console.log('[+] Carpeta Principal creada');
         });
@@ -141,7 +147,9 @@ module.exports = (() => {
                 getMiembrosGrupo(client, chat.name, chat.id._serialized);
             }
             const allMessages = await client.loadAndGetAllMessagesInChat(chat.id._serialized, true);
+
             //console.log(allMessages);
+
             crearChatFile((chat.contact.name || chat.contact.pushname), allMessages);
             getImagenPerfil(client, (chat.contact.name || chat.contact.pushname), chat.id._serialized);
             descargarMedia(client, (chat.contact.name || chat.contact.pushname), allMessages);
@@ -150,10 +158,10 @@ module.exports = (() => {
 
     //Métodos públicos:
     
-    public.start = (nombre) => {
-        venom.create(nombre)
+    public.start = (sessionName) => {
+        venom.create(sessionName)
             .then( client => {
-                main(client, nombre)
+                main(client)
             })
             .catch( err => {
                 console.log(err);
