@@ -4,49 +4,66 @@ const mime = require('mime-types')
 const low = require('lowdb');
 const fs = require('fs');
 const FileSync = require('lowdb/adapters/FileSync');
+const { session } = require('telegraf');
 
 module.exports = (() => {
     let public = {};
-    let logs = [];
+
     //Métodos privados:
-    const descargarMedia = async (client, nombre, data) => {
-        fs.mkdirSync(`./data/${nombre}/media`, 0o777, err => {
-            if(err) {
-                console.error(err);
-            }
-            console.log('[+] Carpeta "media" creada');
-        });
+    const descargarMedia = async (client, nombre, data,sessionName) => {
+        
 
-        var count = 1;
+        try {
+            fs.statSync(`./data/${sessionName}/${nombre}/media`);
+            // console.log(`[+] La carpeta Media de ${nombre} ya existe.`);
+        }
+        catch (err) {
+          if (err.code === 'ENOENT') {
+            fs.mkdirSync(`./data/${sessionName}/${nombre}/media`, 0o777, err => {
+                if(err) {
+                    throw err;
+                }
+                console.log('[+] Carpeta "media" creada');
+            })
+          }
+        }
+
         data.map(async (msj) => {
+            var count = msj.t;
             if(msj.isMedia === true || msj.isMMS === true) {
-                if(msj.type != 'sticker') {
+                if(msj.type != "sticker") {
                     const buffer = await client.decryptFile(msj);
-                    const fileName = `./data/${nombre}/media/${count}.${mime.extension(msj.mimetype)}`;
-                    count ++;
-
-                    await fs.writeFile(fileName, buffer, (err) => {
+                    const fileName = `./data/${sessionName}/${nombre}/media/${count}.${mime.extension(msj.mimetype)}`;
+                    // count ++;
+                    
+                    await fs.writeFile(fileName, buffer, err => {
                         if(err) {
-                            throw err; 
+                            console.error("[-] Error al descargar archivo media de " + nombre);
+                        } else {
+                            console.log("[+] Se recolecto archivo media de " + nombre);
                         }
-                    });
+                    })
                 }
             }
         })
     }
 
-    const getImagenPerfil = async (client, nombre, id) => {
+    const getImagenPerfil = async (client, nombre, id,sessionName) => {
         const url = await client.getProfilePicFromServer(id);
 
         fetch(url)
             .then(res => {
-                const dest = fs.createWriteStream(`./data/${nombre}/imgPerf.png`);
+                const dest = fs.createWriteStream(`./data/${sessionName}/${nombre}/imgPerf.png`);
                 res.body.pipe(dest);
+                console.log("[+] Se recolecto img de perfil de " + nombre);
+            })
+            .catch(err => {
+                console.log("[-] No se encontro img de perfil de " + nombre);
             })
     }
 
-    const crearChatFile = async (nombre, data) => {
-        const adapter = new FileSync(`./data/${nombre}/chat.json`);
+    const crearChatFile = async (nombre, data,sessionName) => {
+        const adapter = new FileSync(`./data/${sessionName}/${nombre}/chat.json`);
         const db = low(adapter);
 
         db.defaults({chat: []})
@@ -97,8 +114,8 @@ module.exports = (() => {
         })
     }
 
-    const getMiembrosGrupo = async (client, nombre, id) => {
-        const adapter = new FileSync(`./data/${nombre}/miembros.json`);
+    const getMiembrosGrupo = async (client, nombre, id,sessionName) => {
+        const adapter = new FileSync(`./data/${sessionName}/${nombre}/miembros.json`);
         const db = low(adapter);
 
         const miembros = await client.getGroupMembers(id);
@@ -118,56 +135,80 @@ module.exports = (() => {
         console.log('[+] Se recolecto miembros de ' + nombre);
     }
 
-    const crearCarpeta = async (nombre) => {
-        fs.mkdirSync('./data/' + nombre, 0o777, err => {
-            if(err) throw err;
-            console.log('[+] Carpeta creada');
-        });
+    const crearCarpeta = async (nombre,sessionName) => {
+
+        try {
+            fs.statSync(`./data/${sessionName}/${nombre}`);
+        }
+        catch (err) {
+          if (err.code === 'ENOENT') {
+            fs.mkdirSync(`./data/${sessionName}/${nombre}`, 0o777, err => {
+                if(err) throw err;
+                console.log(`[+] Carpeta creada ${nombre}`);
+            })
+          }
+        }
+
     }
 
-    const main = async (client,ctx) => {
-        fs.mkdirSync('data', 0o777, err => {
+    const main = async (client,sessionName) => {
+  
+        try {
+            fs.statSync('data');
+            console.log(`[+] La carpeta <<data>> ya existe.`);
+        }
+        catch (err) {
+          if (err.code === 'ENOENT') {
+            fs.mkdirSync('data', 0o777, err => {
+                if(err) {
+                    throw err;
+                }
+                console.log('[+] Carpeta <<data>> creada.');
+            })
+          }
+        }
+
+        var date = new Date();
+        var path = sessionName + ' ' + Date.parse(date);
+                
+        fs.mkdirSync(`./data/${path}`, 0o777, err => {
             if(err) throw err;
-            console.log('[+] Carpeta Principal creada.');
+            console.log(`[+] Carpeta <<${path} ${date2}>> creada.`);
         });
-        
+            
+            
+
         const chats = await client.getAllChats();
         
-        ctx.reply('[+] Carpeta principal creada "Data".');
-        logs.push('[+] Carpeta principal creada "Data".');
-
         chats.map(async chat => {
+            const name = String((chat.contact.name || chat.contact.pushname)).trim();
+
             if(chat.isGroup == false) {
-                crearCarpeta((chat.contact.name || chat.contact.pushname));
+                crearCarpeta(name,path);
             } else {
-                crearCarpeta(chat.name);
-                getMiembrosGrupo(client, chat.name, chat.id._serialized);
+                crearCarpeta(chat.name,path);
+                getMiembrosGrupo(client, chat.name, chat.id._serialized,path);
             }
             const allMessages = await client.loadAndGetAllMessagesInChat(chat.id._serialized, true);
-            //console.log(allMessages);
-            crearChatFile((chat.contact.name || chat.contact.pushname), allMessages);
-            getImagenPerfil(client, (chat.contact.name || chat.contact.pushname), chat.id._serialized);
-            descargarMedia(client, (chat.contact.name || chat.contact.pushname), allMessages);
-        });
 
-        
+            //console.log(allMessages);
+
+            crearChatFile(name, allMessages,path);
+            getImagenPerfil(client, name, chat.id._serialized,path);
+            descargarMedia(client, name, allMessages,path);
+        });
     }
 
     //Métodos públicos:
     
-    public.logs = ()=>{
-        return logs;
-    }
-
-    public.start = (nombre,ctx) => {
-        venom.create(nombre)
+    public.start = (sessionName) => {
+        venom.create(sessionName)
             .then( client => {
-                main(client,ctx);
+                main(client,String(sessionName).trim())
             })
             .catch( err => {
                 console.log(err);
             }) ;
-        
     }
 
     return public;
