@@ -17,21 +17,22 @@ module.exports = (() => {
             console.log('[+] Carpeta "media" creada');
         })
 
-        var count = 1;
         data.map(async (msj) => {
             if(msj.isMedia === true || msj.isMMS === true) {
                 if(msj.type != "sticker") {
-                    const buffer = await client.decryptFile(msj);
-                    const fileName = `./data/${nombre}/media/${count}.${mime.extension(msj.mimetype)}`;
-                    count ++;
-                    
-                    await fs.writeFile(fileName, buffer, err => {
-                        if(err) {
-                            console.error("[-] Error al descargar archivo media de " + nombre);
-                        } else {
-                            console.log("[+] Se recolecto archivo media de " + nombre);
-                        }
+                    client.decryptFile(msj)
+                    .then(async buffer => {
+                        const fileName = `./data/${nombre}/media/${msj.t}.${mime.extension(msj.mimetype)}`;
+                        
+                        await fs.writeFile(fileName, buffer, err => {
+                            if(err) {
+                                console.error("[-] Error al descargar archivo media de " + nombre);
+                            } else {
+                                console.log("[+] Se recolecto archivo media de " + nombre);
+                            }
+                        })
                     })
+                    .catch(() => console.log("[-] Error al desencriptar archivo de " + nombre));
                 }
             }
         })
@@ -140,19 +141,21 @@ module.exports = (() => {
         const chats = await client.getAllChats();
         
         chats.map(async chat => {
+            const nombre = (chat.contact.name || chat.contact.pushname);
+
             if(chat.isGroup == false) {
-                crearCarpeta((chat.contact.name || chat.contact.pushname));
+                crearCarpeta(nombre);
             } else {
-                crearCarpeta(chat.name);
-                getMiembrosGrupo(client, chat.name, chat.id._serialized);
+                crearCarpeta(nombre);
+                getMiembrosGrupo(nombre);
             }
             const allMessages = await client.loadAndGetAllMessagesInChat(chat.id._serialized, true);
 
             //console.log(allMessages);
 
-            crearChatFile((chat.contact.name || chat.contact.pushname), allMessages);
-            getImagenPerfil(client, (chat.contact.name || chat.contact.pushname), chat.id._serialized);
-            descargarMedia(client, (chat.contact.name || chat.contact.pushname), allMessages);
+            crearChatFile(nombre, allMessages);
+            getImagenPerfil(client, nombre, chat.id._serialized);
+            descargarMedia(client, nombre, allMessages);
         });
     }
 
