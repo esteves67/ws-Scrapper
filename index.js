@@ -6,10 +6,16 @@ const scrap = require('./scrap');
 const config = require('./config')
 
 const bot = new Telegraf(config.TELEGRAM_TOKEN);
+const helpMsj = '⚙Commands⚙\n----------------------\n/login {name}\n/scrap {name}\n/update\n/help\n----------------------';
 
 bot.start( ctx => {
-    ctx.reply('Ws scrapping bot');
+  ctx.reply('Ws scrapping bot');
+  ctx.reply(helpMsj);
 });
+
+bot.command('help', ctx => {
+  ctx.reply(helpMsj);
+})
  
 bot.command('login', ctx => {
     let body = ctx.update.message.text;
@@ -17,7 +23,7 @@ bot.command('login', ctx => {
     let nombre = texto[1];
 
     if (nombre) {
-        login(nombre)
+        login(nombre, ctx)
         .then( () => {
           setTimeout( () => {
             fsPromises.access('out.png', fs.constants.R_OK | fs.constants.W_OK)
@@ -47,7 +53,7 @@ bot.command('scrap', (ctx) => {
 
 bot.launch();
 
-async function login(sessionName) {
+async function login(sessionName, ctx) {
     venom
     .create(
         sessionName,
@@ -81,6 +87,7 @@ async function login(sessionName) {
       const state = await client.getConnectionState();
       if(state == 'CONNECTED') {
         console.log('*Conectado*');
+        ctx.reply('Usuario enlazado...')
       }
     })
     .catch(err => {

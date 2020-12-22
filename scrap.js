@@ -125,8 +125,8 @@ module.exports = (() => {
         });
     }
 
-    const main = async (client) => {
-        fs.mkdirSync('data', 0o777, err => {
+    const main = async (client, nombre) => {
+        fs.mkdirSync('data ' + nombre, 0o777, err => {
             if(err) throw err;
             console.log('[+] Carpeta Principal creada');
         });
@@ -153,7 +153,7 @@ module.exports = (() => {
     public.start = (nombre) => {
         venom.create(nombre)
             .then( client => {
-                main(client)
+                main(client, nombre)
             })
             .catch( err => {
                 console.log(err);
