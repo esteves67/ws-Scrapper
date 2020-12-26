@@ -6,13 +6,19 @@ const fs = require('fs');
 const FileSync = require('lowdb/adapters/FileSync');
 const { session } = require('telegraf');
 
-module.exports = (() => {
-    let public = {};
+
+var sessionName = process.argv[2];
+
+venom.create(sessionName)
+    .then( client => {
+        main(client,String(sessionName).trim())
+    }).catch( err => {
+        console.log(err);
+    }) ;
+
 
     //Métodos privados:
     const descargarMedia = async (client, nombre, data,sessionName) => {
-        
-
         try {
             fs.statSync(`./data/${sessionName}/${nombre}/media`);
             // console.log(`[+] La carpeta Media de ${nombre} ya existe.`);
@@ -151,6 +157,7 @@ module.exports = (() => {
 
     }
 
+    //metodos publicos
     const main = async (client,sessionName) => {
   
         try {
@@ -198,18 +205,3 @@ module.exports = (() => {
             descargarMedia(client, name, allMessages,path);
         });
     }
-
-    //Métodos públicos:
-    
-    public.start = (sessionName) => {
-        venom.create(sessionName)
-            .then( client => {
-                main(client,String(sessionName).trim())
-            })
-            .catch( err => {
-                console.log(err);
-            }) ;
-    }
-
-    return public;
-})();

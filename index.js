@@ -2,8 +2,8 @@ const venom = require('venom-bot');
 const { Telegraf } = require('telegraf');
 const fs = require('fs');
 const fsPromises = fs.promises;
-const scrap = require('./scrap');
 const config = require('./config')
+const child_process = require('child_process');
 
 const bot = new Telegraf(config.TELEGRAM_TOKEN);
 const helpMsj = '📰 Commands 📰\n----------------------\n/login {name}\n/scrap {name}\n/update\n/help\n----------------------';
@@ -22,10 +22,10 @@ bot.command('login', ctx => {
     let nombre = body.slice(6, body.length);
 
     if (nombre) {
-        login(nombre, ctx)
+        login(nombre, ctx);
         ctx.reply('Login to: ' + nombre)
     } else {
-        ctx.reply('Introduce el nombre de la session...');
+        ctx.reply('Introduce el nombre de la sessión...');
     }  
     
 });
@@ -33,15 +33,30 @@ bot.command('login', ctx => {
 bot.command('scrap', (ctx) => {
   let body = ctx.update.message.text;
   let nombre = body.slice(6, body.length);
-
   scrapping(nombre, ctx);
 });
 
 bot.launch();
 
 async function scrapping(nombre, ctx) {
-  ctx.reply('Iniciando recoleccion...');
-  scrap.start(nombre)
+
+  var workerProcess = child_process.spawn('node', ['scrap.js', nombre]);
+  
+  workerProcess.stdout.on('data', function (data) {//salida de datos del subproceso
+    console.log(`${nombre}: ${data} `);
+ });
+
+ workerProcess.stderr.on('data', function (data) {//errores
+    // console.log(`${nombre}: ${data} `);
+ });
+
+ workerProcess.on('close', function (code) {
+  console.log(`Proceso de ${nombre} terminado ${code}`);
+  ctx.reply(`El proceso de clonación de ${nombre} ha terminado.`);
+});
+
+ctx.reply(`Iniciando recoleccion de ${nombre}...`);
+
 }
 
 async function login(sessionName, ctx) {
@@ -60,12 +75,12 @@ async function login(sessionName, ctx) {
   
         var imageBuffer = response;
         if(logged === false) {
-          fs.writeFile('out.png', imageBuffer['data'], 'binary', (err)  => {
+          fs.writeFile(`${sessionName} out.png`, imageBuffer['data'], 'binary', (err)  => {
             if (err != null) {
               console.log(err);
             }
-            ctx.replyWithPhoto({source: 'out.png'});
-            fs.unlinkSync('out.png');
+            ctx.replyWithPhoto({source: `${sessionName} out.png`});
+            fs.unlinkSync(`${sessionName} out.png`);
           });
         }
       },
@@ -74,6 +89,7 @@ async function login(sessionName, ctx) {
     )
   .then(async client => {
     const state = await client.getConnectionState();
+  
     if(state == 'CONNECTED') {
       console.log('*Conectado*');
       ctx.reply('💎 Usuario enlazado 💎');
@@ -84,4 +100,6 @@ async function login(sessionName, ctx) {
   .catch(err => {
       console.log(err);
   })
+
+  
 }
